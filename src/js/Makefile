@@ -13,18 +13,19 @@ LDFLAGS += -s WASM=1 -s TOTAL_MEMORY=512MB -s ALLOW_MEMORY_GROWTH=1 -s DISABLE_E
 
 include ../makefiles/default_rules.mk
 
-GRAPH_DIR = zork_graph
-WORDS_TXT = $(GRAPH_DIR)/words.txt
-ZORK_GRAPH = $(GRAPH_DIR)/HCLG.fst
-$(ZORK_GRAPH) $(WORDS_TXT): alexa_fst.py
-	./alexa_fst.py AlexaZork zork_lang acoustic_model $(GRAPH_DIR)
+gmm: decode-gmm.cc kaldi-interop.js model_gmm/HCLG.fst model_gmm/words.txt
+	$(CXX) -o gmm-kaldi-worker.js $(LDFLAGS) $(CXXFLAGS) $(LDLIBS) $(XDEPENDS) decode-gmm.cc \
+		--preload-file model_gmm/final.mdl \
+		--preload-file model_gmm/matrix.scp \
+		--preload-file model_gmm/mfcc.conf \
+		--preload-file model_gmm/HCLG.fst \
+		--preload-file model_gmm/words.txt \
+	&& ./cpy.sh gmm
 
-zork-worker.js: decode-gmm.cc kaldi-worker-js.js $(ZORK_GRAPH) $(WORDS_TXT)
-	$(CXX) -o zork-worker.js $(LDFLAGS) $(CXXFLAGS) $(LDLIBS) $(XDEPENDS) decode-gmm.cc \
-		--preload-file acoustic_model/final.mdl \
-		--preload-file acoustic_model/mfcc.conf \
-		--preload-file $(ZORK_GRAPH) \
-		--preload-file $(WORDS_TXT) \
-		--preload-file acoustic_model/matrix.scp
-
-zork: zork-worker.js
+nnet3: decode-nnet3.cc kaldi-interop.js model_nnet3/HCLG.fst model_nnet3/words.txt
+	$(CXX) -o nnet3-kaldi-worker.js $(LDFLAGS) $(CXXFLAGS) $(LDLIBS) $(XDEPENDS) decode-nnet3.cc \
+		--preload-file model_nnet3/final.mdl \
+		--preload-file model_nnet3/mfcc.conf \
+		--preload-file model_nnet3/HCLG.fst \
+		--preload-file model_nnet3/words.txt \
+	&& ./cpy.sh nnet3

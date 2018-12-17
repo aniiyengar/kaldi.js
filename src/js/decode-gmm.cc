@@ -101,8 +101,8 @@ void ASR::ResetDecoder() {
   this->total_length = 0;
 
   OnlineFeaturePipelineCommandLineConfig cmd_cfg;
-  cmd_cfg.global_cmvn_stats_rxfilename = "acoustic_model/matrix.scp";
-  cmd_cfg.mfcc_config = "acoustic_model/mfcc.conf";
+  cmd_cfg.global_cmvn_stats_rxfilename = "model_gmm/matrix.scp";
+  cmd_cfg.mfcc_config = "model_gmm/mfcc.conf";
   cmd_cfg.feature_type = "mfcc";
 
   this->asr_samp_freq = 8000;
@@ -165,8 +165,6 @@ void ASR::DecodeChunk() {
   int this_chunk_length = this->chunk_valid;
   this->total_length += this_chunk_length;
 
-  KALDI_LOG << this->chunk.Range(0, this_chunk_length);
-
   this->pipeline_prototype->AcceptWaveform(
             asr->asr_samp_freq,
             this->chunk.Range(0, this_chunk_length));
@@ -187,7 +185,7 @@ void ASR::DecodeChunk() {
 
 int main() {
   EM_ASM(
-    self.importScripts('kaldi-worker-js.js');
+    self.importScripts('kaldi-interop.js');
   );
 
   emscripten_exit_with_live_runtime();
@@ -204,18 +202,17 @@ float *_KaldiJsInit(char *commandline) {
 
     ParseOptions po("Online GMM decoding.\n");
 
-    std::string word_syms_rxfilename;
     BaseFloat chunk_length_secs = 0.05;
     bool do_endpointing = false;
     std::string use_gpu = "no";
-    std::string fst_rxfilename;
     BaseFloat in_samp_freq;
     int in_buffer_size;
 
+    std::string fst_rxfilename = "model_gmm/HCLG.fst";
+    std::string word_syms_rxfilename = "model_gmm/words.txt";
+
     po.Register("chunk-length", &chunk_length_secs, "");
-    po.Register("word-syms", &word_syms_rxfilename, "");
     po.Register("do-endpointing", &do_endpointing, "");
-    po.Register("decode-fst", &fst_rxfilename, "");
     po.Register("in-samp-freq", &in_samp_freq, "");
     po.Register("in-bufsize", &in_buffer_size, "");
 
@@ -284,9 +281,7 @@ void KaldiJsHandleAudio() {
     asr->resampler->Resample(asr->audio_in, false, &asr->audio_in_resampled);
     asr->audio_in_resampled.Scale(kWaveSampleMax);
 
-    Matrix<BaseFloat> feats;
-    asr->pipeline_prototype->GetAsMatrix(&feats);
-    KALDI_LOG << feats;
+    KALDI_LOG << asr->pipeline_prototype->Dim();
 
     int new_i = 0;
     while (new_i < asr->audio_in_resampled.Dim()

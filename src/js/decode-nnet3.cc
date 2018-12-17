@@ -198,7 +198,7 @@ void Asr::DecodeChunk() {
 
 int main() {
     EM_ASM(
-        self.importScripts('kaldi-worker-js.js');
+        self.importScripts('kaldi-interop.js');
     );
 
     // keep the runtime alive so printf etc. continue working
@@ -341,6 +341,9 @@ void KaldiJsHandleAudio() {
 
         asr->resampler->Resample(asr->audio_in, false, &asr->audio_in_resampled);
         asr->audio_in_resampled.Scale(kWaveSampleMax);
+
+        // Matrix<BaseFloat> feats;
+        KALDI_LOG << asr->feature_pipeline->Dim();
         
         int new_i = 0;
         while (new_i < asr->audio_in_resampled.Dim() && !asr->endpoint_detected) {
