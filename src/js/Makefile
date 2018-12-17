@@ -9,7 +9,7 @@ ADDLIBS = ../online2/kaldi-online2.bc ../ivector/kaldi-ivector.bc \
           ../matrix/kaldi-matrix.bc ../base/kaldi-base.bc
 
 #CXXFLAGS += -I.
-LDFLAGS += -s WASM=1 -s TOTAL_MEMORY=314572800 -s ALLOW_MEMORY_GROWTH=1 -s DISABLE_EXCEPTION_CATCHING=0 -s DEMANGLE_SUPPORT=1
+LDFLAGS += -s WASM=1 -s TOTAL_MEMORY=512MB -s ALLOW_MEMORY_GROWTH=1 -s DISABLE_EXCEPTION_CATCHING=0 -s DEMANGLE_SUPPORT=1 -s SAFE_HEAP=1 -s ASSERTIONS=1 -s "BINARYEN_TRAP_MODE='clamp'"
 
 include ../makefiles/default_rules.mk
 
@@ -19,11 +19,12 @@ ZORK_GRAPH = $(GRAPH_DIR)/HCLG.fst
 $(ZORK_GRAPH) $(WORDS_TXT): alexa_fst.py
 	./alexa_fst.py AlexaZork zork_lang acoustic_model $(GRAPH_DIR)
 
-zork-worker.js: kaldi-worker.cc kaldi-worker-js.js $(ZORK_GRAPH) $(WORDS_TXT)
-	$(CXX) -o zork-worker.js $(LDFLAGS) $(CXXFLAGS) $(LDLIBS) $(XDEPENDS) kaldi-worker.cc \
+zork-worker.js: decode-gmm.cc kaldi-worker-js.js $(ZORK_GRAPH) $(WORDS_TXT)
+	$(CXX) -o zork-worker.js $(LDFLAGS) $(CXXFLAGS) $(LDLIBS) $(XDEPENDS) decode-gmm.cc \
 		--preload-file acoustic_model/final.mdl \
 		--preload-file acoustic_model/mfcc.conf \
 		--preload-file $(ZORK_GRAPH) \
-		--preload-file $(WORDS_TXT)
+		--preload-file $(WORDS_TXT) \
+		--preload-file acoustic_model/matrix.scp
 
 zork: zork-worker.js

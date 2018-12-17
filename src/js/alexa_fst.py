@@ -15,12 +15,12 @@ import re
 import subprocess
 import sys
 
-import pywrapfst as fst
+# import pywrapfst as fst
 
 
 DIR = os.path.dirname(__file__)
 KALDI_WSJ = os.path.join(DIR, 'kaldi', 'egs', 'wsj', 's5')
-KALDI_ENV = json.loads(subprocess.check_output(". ./path.sh; python -c 'import os, json; print json.dumps(dict(os.environ))'", shell=True, cwd=KALDI_WSJ))
+# KALDI_ENV = json.loads(subprocess.check_output(". ./path.sh; python -c 'import os, json; print json.dumps(dict(os.environ))'", shell=True, cwd=KALDI_WSJ))
 
 
 class Type(object):
@@ -73,12 +73,13 @@ class WordSet(object):
             wid = next(self.wid_counter)
             self.word_ids[word] = wid
             self.words_by_id[wid] = word
+            print('%s %d' % (word, wid))
             return wid
 
 
 def compile_fst(src):
     cmd = 'fstcompile | fstarcsort --sort_type=ilabel'
-    compiler = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=KALDI_ENV)
+    compiler = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     fst, stderr = compiler.communicate(src.encode('latin-1'))  # input is latin-1 because KALDI_ENV has LC_ALL=C. output is binary
     if compiler.returncode:
         print(stderr)
@@ -126,7 +127,7 @@ def main():
     fst_src = io.StringIO()
 
     eps = words['<eps>']
-    unk = words['<unk>']
+    unk = words['<UNK>']
     restart = words.add('[restart]')
 
     states = itertools.count()
@@ -184,19 +185,21 @@ def main():
     G_fst = os.path.join(graph_dir, 'G.fst')
     with open(G_fst, 'wb') as fst_out:
         fst_out.write(compile_fst(fst_src.getvalue()))
+        print('wrote G')
 
-    print('building decode graph')
-    subprocess.check_call('mkgraph.sh --self-loop-scale 1.0 {lang_dir} {model_dir} {graph_dir}'.format(lang_dir=lang_dir, model_dir=model_dir, graph_dir=graph_dir), shell=True, env=KALDI_ENV)
+    # print('building decode graph')
+    # # subprocess.check_call('mkgraph.sh --self-loop-scale 1.0 {lang_dir} {model_dir} {graph_dir}'.format(lang_dir=lang_dir, model_dir=model_dir, graph_dir=graph_dir), shell=True, env=KALDI_ENV)
+    # subprocess.check_call(['./utils/mkgraph.sh', '--self-loop-scale', '1.0', '~/git/kaldi.js/src/js/zork_lang', '~/git/kaldi.js/src/js/acoustic_model', '~/git/kaldi.js/src/js/zork_graph'], cwd='/Users/aniruddh/git/kaldi/egs/wsj/s5')
     
-    used_wids = set()
-    G = fst.Fst.read(G_fst)
-    for state in G.states():
-        for arc in G.arcs(state):
-            used_wids.add(arc.olabel)
+    # used_wids = set()
+    # G = fst.Fst.read(G_fst)
+    # for state in G.states():
+    #     for arc in G.arcs(state):
+    #         used_wids.add(arc.olabel)
             
-    with open(os.path.join(graph_dir, 'words.txt'), 'w', encoding='latin-1') as word_file:
-        for wid in used_wids:
-            print(words.words_by_id[wid], wid, file=word_file)
+    # with open(os.path.join(graph_dir, 'words.txt'), 'w', encoding='latin-1') as word_file:
+    #     for wid in used_wids:
+    #         print(words.words_by_id[wid], wid, file=word_file)
 
 
 if __name__ == '__main__':
